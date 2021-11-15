@@ -1,0 +1,122 @@
+type Query {
+  user(id: ID!): User!
+  licenses: [License]
+  oneLicense(id: ID!): License!
+  searchUsers(contains: String): [User]
+}
+
+type Mutation {
+  createUser(input: CreateUserInput!): User
+  deleteUser(id: ID!): User
+  updateUser(id: ID!, input: UpdateUserInput!): User
+  login(userName: String!, password: String!): LoginUser!
+  changeUserPassword(id: ID!, oldPassword: String!, newPassword: String!): User
+  resetPassword(id: ID!): User
+}
+
+type User {
+  id: ID!
+  utvar: Int!
+  userName: String!
+  name: String!
+  phone: Int!
+  createdAt: Float!
+  role: Role!
+}
+
+type LoginUser {
+  id: ID!
+  utvar: Int!
+  createdAt: Float!
+  userName: String!
+  name: String!
+  phone: Int!
+  token: String!
+  role: String!
+}
+
+type License {
+  id: Int!
+  evidenceNumber: String!
+  softwareAssurance: Boolean
+  contractId: Int!
+  contract: Contract!
+  softwareId: Int!
+  software: Software!
+  note: String
+  isUsed: Boolean
+  licenseEvents: [LicenseEvent]
+  isAssigned: Boolean!
+}
+
+type LicenseEvent {
+  id: Int!
+  note: String
+  isUsed: Boolean
+  station: String!
+  ticketId: String!
+  LicenseEventTypeId: Int!
+  LicenseEventType: LicenseEventType!
+  assignedAt: Float!
+  assignedByUserId: Int!
+  assignedByUser: User!
+  licenseId: Int!
+  license: License!
+}
+
+type LicenseEventType {
+  id: Int!
+  value: String!
+  note: String
+  licenceEvents: [LicenseEvent]
+  isUsed: Boolean
+}
+
+type Contract {
+  id: Int!
+  contractNumber: String!
+  licenses: [License]
+  platnostSA: Float
+  dateOfLifeCycle: Float
+  datumUkonceniHlavniFazeTechnickePodpory: Float
+  datumUkonceniPodporyAktualizaceSP1: Float
+  datumUkonceniPodporyAktualizaceSP2: Float
+  datumUkonceniPodporyAktualizaceSP3: Float
+  datumUkonceniPodporyAktualizaceSP4: Float
+  note: String
+  isUsed: Boolean
+}
+
+type Software {
+  id: Int!
+  name: String!
+  nameOfProduct: String!
+  kcm: Float!
+  partNumber: String!
+  licenses: [License]
+  note: String
+  isUsed: Boolean
+}
+
+type Role {
+  id: ID!
+  name: String!
+  isUsed: Boolean!
+  note: String
+  Users: [User]
+}
+
+input CreateUserInput {
+  utvar: Int!
+  userName: String!
+  name: String!
+  phone: Int!
+  role: Int!
+}
+
+input UpdateUserInput {
+  utvar: Int!
+  name: String!
+  phone: Int!
+  role: Int!
+}

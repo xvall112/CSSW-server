@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+
+model Role {
+  id  Int @id 
+  name String @db.NVarChar(20) 
+  Users User[]
+  note String? @db.NVarChar(255) 
+  isUsed Boolean @default(true)
+}
+
+model User {
+  id        Int   @id @unique @default(autoincrement())
+  name      String   @db.NVarChar(30) 
+  userName  String   @unique @db.VarChar(30)
+  phone     Int
+  utvar     Int
+  password  String   @db.NVarChar(255)
+  roleId    Int
+  role      Role @relation(fields: [roleId], references: [id])
+  LicenseEvents LicenseEvent[]
+  createdAt DateTime @db.DateTimeOffset @default(now())
+  updatedAt DateTime @db.DateTimeOffset @default(now())
+  note String? @db.NVarChar(255) 
+  isUsed Boolean @default(true)
+}
+
+model Contract {
+  id Int @id @unique @default(autoincrement())
+  contractNumber String @unique @db.NVarChar(20)
+  licenses License[]
+  platnostSA DateTime? @db.Date
+  dateOfLifeCycle DateTime? @db.Date
+  datumUkonceniHlavniFazeTechnickePodpory DateTime? @db.Date
+  datumUkonceniPodporyAktualizaceSP1 DateTime? @db.Date
+  datumUkonceniPodporyAktualizaceSP2 DateTime? @db.Date
+  datumUkonceniPodporyAktualizaceSP3 DateTime? @db.Date
+  datumUkonceniPodporyAktualizaceSP4 DateTime? @db.Date
+  note String? @db.NVarChar(255) 
+  isUsed Boolean @default(true)
+}
+
+model License {
+  id Int @id @unique @default(autoincrement())
+  evidenceNumber String @db.NVarChar(50) 
+  softwareAssurance Boolean
+  contractId Int
+  contract Contract @relation(fields: [contractId], references: [id])
+  softwareId Int 
+  software Software @relation(fields: [softwareId], references: [id])
+  note String? @db.NVarChar(255) 
+  isUsed Boolean @default(true)
+  licenseEvents LicenseEvent[]
+  isAssigned Boolean @default(false)
+}
+
+model Software{
+  id Int @id @unique @default(autoincrement())
+  name String @db.NVarChar(50) 
+  nameOfProduct String @db.NVarChar(50) 
+  kcm Float
+  partNumber String @db.NVarChar(30) 
+  licenses License[]
+  note String? @db.NVarChar(255) 
+  isUsed Boolean @default(true)
+}
+
+model LicenseEvent{
+  id Int @id @unique @default(autoincrement())
+  note String? @db.NVarChar(255) 
+  isUsed Boolean @default(true)
+  station String @db.NVarChar(20) 
+  ticketId String @db.NVarChar(20) 
+  LicenseEventTypeId Int
+  LicenseEventType LicenseEventType @relation(fields: [LicenseEventTypeId], references: [id])
+  assignedAt DateTime @db.DateTimeOffset @default(now())
+  assignedByUserId Int
+  assignedByUser User @relation(fields: [assignedByUserId], references: [id])
+  licenseId Int
+  license License @relation(fields: [licenseId], references: [id])
+}
+
+model LicenseEventType {
+  id Int @id @unique @default(autoincrement())
+  value String @db.NVarChar(20) 
+  note String? @db.NVarChar(255) 
+  licenceEvents LicenseEvent[]
+  isUsed Boolean @default(true)
+}
