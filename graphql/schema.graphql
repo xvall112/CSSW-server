@@ -1,17 +1,35 @@
 type Query {
   user(id: ID!): User!
-  licenses: [License]
+  licenses(input: String, offset: Int, limit: Int): allLicense
+  filterLicenses(id: String): License
   oneLicense(id: ID!): License!
-  searchUsers(contains: String): [User]
+  searchUsers(contains: String, offset: Int, limit: Int): allUsers
+  allSoftware: [Software]
+  getStationLicenses(station: Int!): Station
+  allStations: [Station]
 }
 
 type Mutation {
+  createLicense(input: [CreateLicenseInput!]): License
   createUser(input: CreateUserInput!): User
   deleteUser(id: ID!): User
   updateUser(id: ID!, input: UpdateUserInput!): User
   login(userName: String!, password: String!): LoginUser!
   changeUserPassword(id: ID!, oldPassword: String!, newPassword: String!): User
   resetPassword(id: ID!): User
+  addLicenses(
+    station: Int!
+    requirement: String!
+    softwareId: [String]!
+  ): [License]
+  removeLicenses(
+    station: Int!
+    requirement: String!
+    licenseId: [String]!
+  ): [License]
+  deleteStation(stations: [Int]!, requirement: String!): [Station]
+  isStation(station: Int): Boolean
+  addStationToSis(stations: [Int]!): [Station]
 }
 
 type User {
@@ -35,6 +53,16 @@ type LoginUser {
   role: String!
 }
 
+type allLicense {
+  countLicenses: Int
+  licenses: [License]
+}
+
+type allUsers {
+  countUsers: Int
+  users: [User]
+}
+
 type License {
   id: Int!
   evidenceNumber: String!
@@ -47,13 +75,21 @@ type License {
   isUsed: Boolean
   licenseEvents: [LicenseEvent]
   isAssigned: Boolean!
+  station: Station
+}
+
+type Station {
+  id: Int!
+  name: Int!
+  licenses: [License]
+  licenseEvents: [LicenseEvent]
 }
 
 type LicenseEvent {
   id: Int!
   note: String
   isUsed: Boolean
-  station: String!
+  station: Station!
   ticketId: String!
   LicenseEventTypeId: Int!
   LicenseEventType: LicenseEventType!
@@ -90,9 +126,9 @@ type Contract {
 type Software {
   id: Int!
   name: String!
-  nameOfProduct: String!
+  nameOfProduct: String
   kcm: Float!
-  partNumber: String!
+  partNumber: String
   licenses: [License]
   note: String
   isUsed: Boolean
@@ -119,4 +155,22 @@ input UpdateUserInput {
   name: String!
   phone: Int!
   role: Int!
+}
+
+input CreateLicenseInput {
+  contractNumber: String!
+  dateOfLifeCycle: String
+  datumUkonceniHlavniFazeTechnickePodpory: String
+  datumUkonceniRozsirenePodpory: String
+  datumUkonceniPodporyAktualizaceSP1: String
+  datumUkonceniPodporyAktualizaceSP2: String
+  datumUkonceniPodporyAktualizaceSP3: String
+  datumUkonceniPodporyAktualizaceSP4: String
+  evidenceNumber: String!
+  kcm: String!
+  name: String!
+  nameOfProduct: String
+  partNumber: String
+  platnostSA: String
+  softwareAssurance: String
 }

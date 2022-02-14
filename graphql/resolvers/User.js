@@ -25,18 +25,19 @@ export default {
       return users;
     }, */
 
-    //jeden uzivatel account
+    //detai uzivatele
     user: async (root, { id }, { prisma, user }, info) => {
+      const parseId = await parseInt(id);
       //user ma pristup jen ke svemu uctu, admin a owner ma pristup ke vsem uctum
       if (
         !user ||
-        (user.id !== id &&
+        (user.id !== parseId &&
           !user.role.includes(`owner`) &&
           !user.role.includes(`admin`))
       ) {
         throw new AuthenticationError(`Nemáte oprávnění pro výpis uživatele`);
       }
-      const parseId = await parseInt(id);
+      //vyhledani uzivatele
       const existUser = await prisma.user.findUnique({
         where: {
           id: parseId,
@@ -50,8 +51,12 @@ export default {
       }
       return existUser;
     },
-
-    searchUsers: async (root, { contains }, { prisma, user }) => {
+    // vyheldani uzivatele v tabelce uzivatelu na zaklade textu (vyhledava podle jmena nebo uzivatelskeho jmena)
+    searchUsers: async (
+      root,
+      { contains, limit, offset },
+      { prisma, user }
+    ) => {
       //je user prihlaseny a ma upravneni
       if (
         !user ||
@@ -59,37 +64,46 @@ export default {
       ) {
         throw new AuthenticationError(`Nemáte oprávnění pro výpis uživatelů`);
       }
-
-      if (contains === "") {
-        const users = await prisma.user.findMany({
+      const [countUsers, users] = await prisma.$transaction([
+        prisma.user.count({
+          where: {
+            OR: [
+              {
+                name: {
+                  contains: contains,
+                },
+              },
+              {
+                userName: {
+                  contains: contains,
+                },
+              },
+            ],
+          },
+        }),
+        prisma.user.findMany({
+          skip: offset,
+          take: limit,
+          where: {
+            OR: [
+              {
+                name: {
+                  contains: contains,
+                },
+              },
+              {
+                userName: {
+                  contains: contains,
+                },
+              },
+            ],
+          },
           include: {
             role: true,
           },
-        });
-        if (!users) {
-          throw new Error("Žádný uživatel nenalezen");
-        }
-        return users;
-      }
-      return prisma.user.findMany({
-        where: {
-          OR: [
-            {
-              name: {
-                contains: contains,
-              },
-            },
-            {
-              userName: {
-                contains: contains,
-              },
-            },
-          ],
-        },
-        include: {
-          role: true,
-        },
-      });
+        }),
+      ]);
+      return { countUsers, users };
     },
   },
 
@@ -105,8 +119,9 @@ export default {
           `Nemáte oprávnění pro vytvoření uživatele`
         );
       }
-
+      // destraction input
       const { name, userName, phone, utvar, role } = input;
+      //pokud existuje uzivatel se stejnym uzivatelskym jmenem get error
       const userExists = await prisma.user.findUnique({
         where: {
           userName,
@@ -116,11 +131,13 @@ export default {
         throw new Error("Uživatel s tímto uživatelským jménem již existuje");
       }
       let hashedPassword;
+      //heshovani zadaneho hesla
       try {
         hashedPassword = await bcrypt.hash("111111", 12);
       } catch (err) {
         throw new Error("Nepodařilo se vytvořit uživatele, zkuste to znovu");
       }
+      //vytvoreni uzivatele
       const newUser = await prisma.user.create({
         data: {
           name: name,
@@ -136,7 +153,7 @@ export default {
 
     //prihlaseni uzivatele
     login: async (root, { userName, password }, { prisma }) => {
-     
+      //vyhledani uzivatele
       const user = await prisma.user.findUnique({
         where: {
           userName: userName,
@@ -148,13 +165,17 @@ export default {
       if (!user) {
         throw new UserInputError(`Špatné uživatelské jméno nebo heslo`);
       }
-     
+      if (user.isUsed === false) {
+        throw new UserInputError(`Váš účet byl smazán`);
+      }
       const { id, name, utvar, createdAt, phone, role } = user;
+      //overeni hesla
       const isValid = await bcrypt.compare(password, user.password);
       if (!isValid) {
         throw new AuthenticationError(`Špatné uživatelské jméno nebo heslo`);
       }
       let token;
+      //vytvoreni tokenu pro uspesne prihlaseneho uzivatele(expirace tokenu 8h)
       try {
         token = await jwt.sign(
           { id: user.id, role: [user.role.name] },
@@ -191,6 +212,7 @@ export default {
         );
       }
       const parseId = await parseInt(id);
+      //nalezeni uzivatele
       const userExists = await prisma.user.findUnique({
         where: {
           id: parseId,
@@ -199,10 +221,13 @@ export default {
       if (!userExists) {
         throw new Error("Uživatel neexistuje");
       }
-
-      await prisma.user.delete({
+      //smazani uzivatele
+      await prisma.user.update({
         where: {
           id: parseId,
+        },
+        data: {
+          isUsed: false,
         },
       });
     },
@@ -217,6 +242,7 @@ export default {
       ) {
         throw new AuthenticationError(`Nemáte oprávnění pro reset hesla`);
       }
+      //vyhledani uzivatele
       const existUser = await prisma.user.findUnique({
         where: {
           id: parseId,
@@ -226,11 +252,13 @@ export default {
         throw new Error("Uživatel neexistuje");
       }
       let hashedPassword;
+      //nastaveni a hash reset hesla 111111
       try {
         hashedPassword = await bcrypt.hash("111111", 12);
       } catch (err) {
         throw new Error("Nepodařilo se resetovat heslo, zkuste to znovu");
       }
+      //aktualizace hesla na 111111
       await prisma.user.update({
         where: {
           id: parseId,
@@ -252,7 +280,7 @@ export default {
       if (!user || user.id !== parseId) {
         throw new AuthenticationError(`Nemáte oprávnění pro změnu hesla`);
       }
-
+      //vyhledani uzivatele
       const existUser = await prisma.user.findUnique({
         where: {
           id: parseId,
@@ -261,12 +289,14 @@ export default {
       if (!existUser) {
         throw new Error("Uživatel neexistuje");
       }
+      //overeni stavajiciho hesla
       const isValid = await bcrypt.compare(oldPassword, existUser.password);
       if (!isValid) {
         throw new UserInputError(`Špatné současné heslo`);
       }
+      //hash noveho hesla
       const updatePassword = await bcrypt.hash(newPassword, 12);
-
+      //aktualizace noveho hesla
       await prisma.user.update({
         where: {
           id: parseId,
@@ -292,6 +322,7 @@ export default {
       }
       const parseId = await parseInt(id);
       const { name, phone, utvar, role } = input;
+      //vyhledani uzivatele
       const userExists = await prisma.user.findUnique({
         where: {
           id: parseId,
@@ -300,6 +331,7 @@ export default {
       if (!userExists) {
         throw new Error("Uživatel neexistuje");
       }
+      //aktualizace udaju uzivatele
       const parseUserExists = await parseInt(userExists.id);
       try {
         await prisma.user.update({

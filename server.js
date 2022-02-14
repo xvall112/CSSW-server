@@ -14,20 +14,11 @@ export const jwtSecret = Buffer.from(
   "base64"
 );
 
-/* const connection = async () => {
-  try {
-    await db.sequelize.authenticate();
-    await console.log("Connection has been established successfully.");
-  } catch (error) {
-    console.error("Unable to connect to the database:", error);
-  }
-}; */
-
 const app = express();
 
 app.use(
   cors(),
-  bodyParser.json(),
+  bodyParser.json({ limit: "50mb" }),
   expressJwt({
     secret: jwtSecret,
     credentialsRequired: false,
@@ -54,14 +45,3 @@ const apolloServer = new ApolloServer({
 apolloServer.applyMiddleware({ app, path: "/graphql" });
 
 app.listen(port, () => console.info(`Server started on port ${port}`));
-/* connection();
-
-db.sequelize
-  .sync( { force: true } )
-  .then(() => {
-    console.log("All models were synchronized successfully.");
-    app.listen(port, () => console.info(`Server started on port ${port}`));
-  })
-  .catch((err) => {
-    console.log(err);
-  });  */
